@@ -14,36 +14,29 @@ async def setup_browser():
 async def navigate_to_page(page, url):
   await page.goto(url, timeout=90000)
 
-async def table_results_overall(page):
-  selector = "#div_results2025-2026121_overall table tbody tr"
-  rows = await page.locator(selector).all()
+async def table_results_overall(page, id_table):
+  rows = await page.locator(id_table).all()
   data = []
 
+  col_names = [
+    "squad", "matches_played", 
+    "wins", "drafts", "losses",
+    "goals_for", "goals_against", "goals_difference",
+    "total_pts", "last_match_pts", "expected_goal",
+    "expected_goal_allowed", "expected_goal_difference",
+    "expected_goal_difference_90", "last_five_matches",
+    "attendance", "top_scorer", "goalkeeper", "notes"
+    ]
+
   for row in rows:
+    ranking = await row.locator("th").text_content() or ""
     cells = await row.locator("td").all()
-    if len(cells) >= 19:
-      item = {
-        "ranking": await row.locator("th").text_content() or "",
-        "squad": await cells[0].text_content() or "",
-        "matches_played": await cells[1].text_content() or "",
-        "wins": await cells[2].text_content() or "",
-        "drafts": await cells[3].text_content() or "",
-        "losses": await cells[4].text_content() or "",
-        "goals_for": await cells[5].text_content() or "",
-        "goals_against": await cells[6].text_content() or "",
-        "goals_difference": await cells[7].text_content() or "",
-        "total_pts": await cells[8].text_content() or "",
-        "last_match_pts": await cells[9].text_content() or "",
-        "expected_goal": await cells[10].text_content() or "",
-        "expected_goal_allowed": await cells[11].text_content() or "",
-        "expected_goal_difference": await cells[12].text_content() or "",
-        "expected_goal_difference_90": await cells[13].text_content() or "",
-        "last_five_matches": await cells[14].text_content() or "",
-        "attendance": await cells[15].text_content() or "",
-        "top_scorer": await cells[16].text_content() or "",
-        "goalkeeper": await cells[17].text_content() or "",
-        "notes": await cells[18].text_content() if len(cells) > 18 else ""
-      }
+    item = {}
+    item["ranking"] = ranking[0].strip()
+
+    if len(cells) >= len(col_names):
+      for i, key in enumerate(col_names):
+        item[key] = await cells[i].text_content() or ""
       data.append(item)
 
   return data
@@ -100,9 +93,9 @@ async def table_results_squads_shooting(page):
 
   return data
 
-async def build_json(overall, squads_standard, squads_shooting):
+async def build_json(comp_name, overall, squads_standard, squads_shooting):
   result = {
-    "league": "LaLiga",
+    "league": comp_name,
     "season": "2025-2026",
     "overall_table": overall,
     "stats_squads_standard": squads_standard,
@@ -112,14 +105,38 @@ async def build_json(overall, squads_standard, squads_shooting):
 
 async def main():
   playwright, browser, page = await setup_browser()
-  await navigate_to_page(page, "https://fbref.com/en/comps/12/La-Liga-Stats")
+  competitions = {
+   "laliga":{
+      "id_general_table": "#div_results2025-2026121_overall table tbody tr",
+      "url":"https://fbref.com/en/comps/12/La-Liga-Stats"
+   },
+   "premierleague":{
+      "id_general_table": "#div_results2025-202691_overall table tbody tr",
+      "url":"https://fbref.com/en/comps/9/Premier-League-Stats"
+   },
+   "bundesliga":{
+      "id_general_table": "#div_results2025-2026201_overall table tbody tr",
+      "url":"https://fbref.com/en/comps/20/Bundesliga-Stats"
+   },
+   "serie_a":{
+      "id_general_table": "#div_results2025-2026111_overall table tbody tr",
+      "url":"https://fbref.com/en/comps/11/Serie-A-Stats"
+   },
+  #  "champions":{
+  #     "id_general_table": "#div_results2025-202680_overall table tbody tr",
+  #     "url":"https://fbref.com/en/comps/8/Champions-League-Stats"
+  #  }
+  }
 
-  overall_data = await table_results_overall(page)
-  squads_standard_data = await table_results_stats_squads(page)
-  squads_shooting_data = await table_results_squads_shooting(page)
+  for comp_name, values in competitions.items():
+    await navigate_to_page(page, values['url'])
 
-  output = await build_json(overall_data, squads_standard_data, squads_shooting_data)
-  print(output)
+    overall_data = await table_results_overall(page, values['id_general_table'])
+    squads_standard_data = await table_results_stats_squads(page)
+    squads_shooting_data = await table_results_squads_shooting(page)
+
+    output = await build_json(comp_name, overall_data, squads_standard_data, squads_shooting_data)
+    print(output)
 
   await browser.close()
   await playwright.stop()
