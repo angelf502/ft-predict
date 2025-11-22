@@ -11,8 +11,15 @@ async def setup_browser():
   page = await context.new_page()
   return playwright, browser, page
 
-async def navigate_to_page(page, url):
-  await page.goto(url, timeout=90000)
+async def navigate_to_page(page, url, max_retries=3):
+  attempt=1
+  while attempt <= max_retries:
+    try:
+      response = await page.goto(url, timeout=90000)
+      return response
+    except Exception as e:
+      attempt+=1
+      raise Exception({"status": "error", "message": str(e)})
 
 async def table_results_overall(page, id_table):
   rows = await page.locator(id_table).all()
