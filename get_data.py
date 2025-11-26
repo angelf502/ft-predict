@@ -48,6 +48,42 @@ async def table_results_overall(page, id_table):
 
   return data
 
+async def table_results_home_away(page, id_table):
+  rows = await page.locator(id_table).all()
+  data = []
+  stat_cols = [
+    "matches_played", "wins", "draws", "losses",
+    "goals_for", "goals_against", "goal_difference",
+    "points", "points_per_game",
+    "expected_goal", "expected_goal_allowed",
+    "expected_goal_difference", "expected_goal_difference_per_game"
+  ]
+
+  for row in rows:
+    cells = await row.locator("th, td").all()
+    total = len(cells)
+    if total < 2 + 2*len(stat_cols):
+      continue
+
+    item = {}
+    item["ranking"] = (await cells[0].text_content()).strip()
+    item["squad"] = (await cells[1].text_content()).strip()
+    item["home"] = {}
+    item["away"] = {}
+
+    for i, key in enumerate(stat_cols):
+      txt = await cells[2 + i].text_content()
+      item["home"][key] = txt.strip() if txt else ""
+
+    offset = 2 + len(stat_cols)
+    for i, key in enumerate(stat_cols):
+      txt = await cells[offset + i].text_content()
+      item["away"][key] = txt.strip() if txt else ""
+
+    data.append(item)
+
+  return data
+
 async def table_results_stats_squads(page):
   selector = "#stats_squads_standard_for tbody tr" # Using table id for subcolumns if theren't subcolumns use div id
   rows = await page.locator(selector).all()
@@ -217,7 +253,7 @@ async def table_results_squads_miscellanoeus(page):
   data = []
 
   col_names = [
-    "squad", "players", "90s_played", "yellow_cards", "red_cards", "second_yellow_cards",
+    "squad", "players", "wins", "yellow_cards", "red_cards", "second_yellow_cards",
     "fouls_committed", "fouls_drawn", "offsides", "crosses", "interceptions", "tackles_won", "penalties_won",
     "penalties_conceded", "own_goals", "ball_recoveries", "aerials_won", "aerials_lost", "aerials_won_percent"
   ]
@@ -232,11 +268,12 @@ async def table_results_squads_miscellanoeus(page):
 
   return data
 
-async def build_json(comp_name, overall, squads_standard, squads_shooting, squads_passing, squads_goal_and_shot_creation, squads_defensive_action, squads_posesion, squads_playing_time, squads_miscellanoeus):
+async def build_json(comp_name, overall, home_away, squads_standard, squads_shooting, squads_passing, squads_goal_and_shot_creation, squads_defensive_action, squads_posesion, squads_playing_time, squads_miscellanoeus):
   result = {
     "league": comp_name,
     "season": "2025-2026",
     "overall_table": overall,
+    "home_away_table": home_away,
     "stats_squads_standard": squads_standard,
     "stats_squads_shooting": squads_shooting,
     "stats_squads_passing": squads_passing,
@@ -253,6 +290,7 @@ async def main():
   competitions = {
    "laliga":{
       "id_general_table": "#div_results2025-2026121_overall table tbody tr",
+      "id_home_away_table": "#results2025-2026121_home_away tbody tr",
       "url":"https://fbref.com/en/comps/12/La-Liga-Stats"
    },
   #  "premierleague":{
@@ -276,20 +314,22 @@ async def main():
   for comp_name, values in competitions.items():
     await navigate_to_page(page, values['url'])
 
-    overall_data = await table_results_overall(page, values['id_general_table'])
-    squads_standard_data = await table_results_stats_squads(page)
-    squads_shooting_data = await table_results_squads_shooting(page)
-    squads_passing_data = await table_results_squads_passing(page)
-    squads_goal_and_shot_creation_data = await table_results_squads_goal_and_shot_creation(page)
-    squads_defensive_action_data = await table_results_squads_defensive_actions(page)
-    squads_possesion_data = await table_results_squads_possesion(page)
-    squads_playing_time_data = await table_results_squads_playing_time(page)
-    squads_miscellaneous_data = await table_results_squads_miscellanoeus(page)
-    #overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[]
+    # overall_data = await table_results_overall(page, values['id_general_table'])
+    home_away_data = await table_results_home_away(page, values['id_home_away_table'])
+    # squads_standard_data = await table_results_stats_squads(page)
+    # squads_shooting_data = await table_results_squads_shooting(page)
+    # squads_passing_data = await table_results_squads_passing(page)
+    # squads_goal_and_shot_creation_data = await table_results_squads_goal_and_shot_creation(page)
+    # squads_defensive_action_data = await table_results_squads_defensive_actions(page)
+    # squads_possesion_data = await table_results_squads_possesion(page)
+    # squads_playing_time_data = await table_results_squads_playing_time(page)
+    # squads_miscellaneous_data = await table_results_squads_miscellanoeus(page)
+    overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[]
     output = await build_json(
       comp_name, 
-      overall_data, 
-      squads_standard_data, 
+      overall_data,
+      home_away_data,
+      squads_standard_data,
       squads_shooting_data, 
       squads_passing_data,
       squads_goal_and_shot_creation_data,
