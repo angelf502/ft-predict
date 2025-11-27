@@ -29,43 +29,47 @@ async def navigate_to_page(page, url, max_retries=3):
       raise Exception({"status": "error", "message": str(e)})
     
 async def injury_results(page, team_locator):
-    selector = ".injury-block"
-    injury_blocks = await page.locator(selector).all()
-    data = []
+  selector = ".injury-block"
+  injury_blocks = await page.locator(selector).all()
+  data = []
 
-    col_names = [
-        "team", "type", "player", "position", "matches", "goals", "assists", 
-        "info", "expected_return"
-    ]
+  col_names = [
+      "team", "type", "player", "position", "matches", "goals", "assists", 
+      "info", "expected_return"
+  ]
 
-    for block in injury_blocks:
-        team_element = block.locator(team_locator)
-        team_name = await team_element.text_content() or ""
-        rows = await block.locator(".inj-row").all()
-        for row in rows:
-            container = row.locator(".inj-container:not(.inj-titles)")
-            cells = await container.locator("span:not(.inj-dropdown)").all()
-            if len(cells) >= len(col_names) - 1:
-                item = {"team": team_name}
-                for i, key in enumerate(col_names[1:], 1):
-                    if key == "type":
-                        class_name = await cells[i-1].get_attribute("class") or ""
-                        item[key] = class_name
-                    else:
-                        item[key] = await cells[i-1].text_content() or ""
-                data.append(item)
+  for block in injury_blocks:
+    team_element = block.locator(team_locator)
+    team_name = await team_element.text_content() or ""
+    rows = await block.locator(".inj-row").all()
+    for row in rows:
+      container = row.locator(".inj-container:not(.inj-titles)")
+      cells = await container.locator("span:not(.inj-dropdown)").all()
+      if len(cells) >= len(col_names) - 1:
+        item = {"team": team_name}
+        for i, key in enumerate(col_names[1:], 1):
+          if key == "type":
+            class_name = await cells[i-1].get_attribute("class") or ""
+            item[key] = class_name
+          else:
+            item[key] = await cells[i-1].text_content() or ""
+        data.append(item)
 
-    return data
+  return data
     
-async def main():
+async def main(league):
+  if league not in COMPETITIONS:
+    await browser.close()
+    await playwright.stop()
+    return {"status": "error", "message": f"League: '{league}' not found."}
+
   playwright, browser, page = await setup_browser()
-
-  for details in COMPETITIONS.values():
-    await navigate_to_page(page, details['url'])
-    data = await injury_results(page, details.get('team_locator', "h3.injuries-title a"))
-    print(json.dumps(data, indent=2))
-
+  competition = COMPETITIONS[league]
+  await navigate_to_page(page, competition['url'])
+  data = await injury_results(page, competition.get('team_locator', "h3.injuries-title a"))
   await browser.close()
   await playwright.stop()
 
-asyncio.run(main())
+  return {"status": "success", "data": data}
+
+# a = asyncio.run(main(league=""))

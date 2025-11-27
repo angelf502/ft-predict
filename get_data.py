@@ -285,62 +285,72 @@ async def build_json(comp_name, overall, home_away, squads_standard, squads_shoo
   }
   return json.dumps(result, indent=2)
 
-async def main():
-  playwright, browser, page = await setup_browser()
+async def main(league):
   competitions = {
    "laliga":{
       "id_general_table": "#div_results2025-2026121_overall table tbody tr",
       "id_home_away_table": "#results2025-2026121_home_away tbody tr",
       "url":"https://fbref.com/en/comps/12/La-Liga-Stats"
    },
-  #  "premierleague":{
-  #     "id_general_table": "#div_results2025-202691_overall table tbody tr",
-  #     "url":"https://fbref.com/en/comps/9/Premier-League-Stats"
-  #  },
-  #  "bundesliga":{
-  #     "id_general_table": "#div_results2025-2026201_overall table tbody tr",
-  #     "url":"https://fbref.com/en/comps/20/Bundesliga-Stats"
-  #  },
-  #  "serie_a":{
-  #     "id_general_table": "#div_results2025-2026111_overall table tbody tr",
-  #     "url":"https://fbref.com/en/comps/11/Serie-A-Stats"
-  #  },
-  #  "champions":{
-  #     "id_general_table": "#div_results2025-202680_overall table tbody tr",
-  #     "url":"https://fbref.com/en/comps/8/Champions-League-Stats"
-  #  }
+   "premierleague":{
+      "id_general_table": "#div_results2025-202691_overall table tbody tr",
+      "id_home_away_table": "#results2025-202691_home_away tbody tr",
+      "url":"https://fbref.com/en/comps/9/Premier-League-Stats"
+   },
+   "bundesliga":{
+      "id_general_table": "#div_results2025-2026201_overall table tbody tr",
+      "id_home_away_table": "#results2025-2026201_home_away tbody tr",
+      "url":"https://fbref.com/en/comps/20/Bundesliga-Stats"
+   },
+   "serie_a":{
+      "id_general_table": "#div_results2025-2026111_overall table tbody tr",
+      "id_home_away_table": "#results2025-2026111_home_away tbody tr",
+      "url":"https://fbref.com/en/comps/11/Serie-A-Stats"
+   },
+   "champions":{
+      "id_general_table": "#div_results2025-202680_overall table tbody tr",
+      "id_home_away_table": "#results2025-202680_home_away tbody tr",
+      "url":"https://fbref.com/en/comps/8/Champions-League-Stats"
+   }
   }
 
-  for comp_name, values in competitions.items():
-    await navigate_to_page(page, values['url'])
+  if league not in competitions:
+    await browser.close()
+    await playwright.stop()
+    return {"status": "error", "message": f"League: '{league}' not found."}
+  
+  playwright, browser, page = await setup_browser()
+  competition = competitions[league]
+  await navigate_to_page(page, competition['url'])
 
-    # overall_data = await table_results_overall(page, values['id_general_table'])
-    home_away_data = await table_results_home_away(page, values['id_home_away_table'])
-    # squads_standard_data = await table_results_stats_squads(page)
-    # squads_shooting_data = await table_results_squads_shooting(page)
-    # squads_passing_data = await table_results_squads_passing(page)
-    # squads_goal_and_shot_creation_data = await table_results_squads_goal_and_shot_creation(page)
-    # squads_defensive_action_data = await table_results_squads_defensive_actions(page)
-    # squads_possesion_data = await table_results_squads_possesion(page)
-    # squads_playing_time_data = await table_results_squads_playing_time(page)
-    # squads_miscellaneous_data = await table_results_squads_miscellanoeus(page)
-    overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[]
-    output = await build_json(
-      comp_name, 
-      overall_data,
-      home_away_data,
-      squads_standard_data,
-      squads_shooting_data, 
-      squads_passing_data,
-      squads_goal_and_shot_creation_data,
-      squads_defensive_action_data,
-      squads_possesion_data,
-      squads_playing_time_data,
-      squads_miscellaneous_data
-      )
-    print(output)
+  overall_data = await table_results_overall(page, competition['id_general_table'])
+  home_away_data = await table_results_home_away(page, competition['id_home_away_table'])
+  squads_standard_data = await table_results_stats_squads(page)
+  squads_shooting_data = await table_results_squads_shooting(page)
+  squads_passing_data = await table_results_squads_passing(page)
+  squads_goal_and_shot_creation_data = await table_results_squads_goal_and_shot_creation(page)
+  squads_defensive_action_data = await table_results_squads_defensive_actions(page)
+  squads_possesion_data = await table_results_squads_possesion(page)
+  squads_playing_time_data = await table_results_squads_playing_time(page)
+  squads_miscellaneous_data = await table_results_squads_miscellanoeus(page)
+  # overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[];home_away_data=[]
+  output = await build_json(
+    league, 
+    overall_data,
+    home_away_data,
+    squads_standard_data,
+    squads_shooting_data, 
+    squads_passing_data,
+    squads_goal_and_shot_creation_data,
+    squads_defensive_action_data,
+    squads_possesion_data,
+    squads_playing_time_data,
+    squads_miscellaneous_data
+    )
 
   await browser.close()
   await playwright.stop()
 
-asyncio.run(main())
+  return output
+
+# a = asyncio.run(main(league=""))
