@@ -2,3 +2,4 @@
 test_*.txt
 test_*
 __pycache__/
+tests/*

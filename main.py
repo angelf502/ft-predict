@@ -1,8 +1,8 @@
 import asyncio
 import json
-from get_data import main as get_data_main
-from get_injuries import main as get_injuries_main
-from probability import AnalizadorProbabilidades
+from data.get_data import main as get_data_main
+from data.get_injuries import main as get_injuries_main
+from src.probability import AnalizadorProbabilidades
 
 class FootballPredictionSystem:
     def __init__(self):

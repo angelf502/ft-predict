@@ -1,6 +1,11 @@
+import sys
+import os
 import json
 import asyncio
 from playwright.async_api import async_playwright
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(parent_dir)
+from tools.cleaner import clean_unicode
 
 realistic_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
 
@@ -45,6 +50,86 @@ async def table_results_overall(page, id_table):
       for i, key in enumerate(col_names):
         item[key] = await cells[i].text_content() or ""
       data.append(item)
+
+  return data
+
+async def table_results_overall_champions(page, id_table):
+  rows = await page.locator(id_table).all()
+  col_names = [
+    "squad", "matches_played",
+    "wins", "draws", "losses",
+    "goals_for", "goals_against", "goals_difference",
+    "total_pts", "expected_goal",
+    "expected_goal_allowed", "expected_goal_difference",
+    "expected_goal_difference_90",
+    "last_five_matches", "attendance",
+    "top_scorer", "goalkeeper", "notes"
+  ]
+
+  data = []
+
+  for row in rows:
+    th_cells = await row.locator(":scope > th").all()
+    if len(th_cells) != 1: continue
+
+    ranking_raw = await th_cells[0].text_content()
+    if not ranking_raw: continue
+    item = {}
+    item["ranking"] = clean_unicode(ranking_raw)
+    cells = await row.locator(":scope > td").all()
+    if len(cells) < len(col_names): continue
+
+    for i, key in enumerate(col_names):
+      raw_text = await cells[i].text_content() or ""
+      raw_text = raw_text.strip()
+      if key == "squad":
+        line = raw_text.split("\n")[0]
+        parts = line.split()
+        name = " ".join(parts[1:]) if len(parts) > 1 else line
+        item[key] = clean_unicode(name)
+      else:
+        item[key] = clean_unicode(raw_text)
+
+    data.append(item)
+
+  return data
+
+async def table_results_home_away_champions(page, id_table):
+  rows = await page.locator(id_table).all()
+  data = []
+  stat_cols = [
+    "matches_played", "wins", "draws", "losses",
+    "goals_for", "goals_against", "goal_difference",
+    "points", "points_per_game",
+    "expected_goal", "expected_goal_allowed",
+    "expected_goal_difference", "expected_goal_difference_per_game"
+  ]
+
+  for row in rows:
+    cells = await row.locator("th, td").all()
+    total = len(cells)
+    # cells = clean_unicode(cells)
+    if total < 2 + 2*len(stat_cols):
+      continue
+
+    item = {}
+    item["ranking"] = (await cells[0].text_content()).strip()
+    item["squad"] = (await cells[1].text_content()).strip()
+    item["home"] = {}
+    item["away"] = {}
+
+    for i, key in enumerate(stat_cols):
+      txt = await cells[2 + i].text_content()
+      txt = clean_unicode(txt)
+      item["home"][key] = txt.strip() if txt else ""
+
+    offset = 2 + len(stat_cols)
+    for i, key in enumerate(stat_cols):
+      txt = await cells[offset + i].text_content()
+      txt = clean_unicode(txt)
+      item["away"][key] = txt.strip() if txt else ""
+
+    data.append(item)
 
   return data
 
@@ -268,7 +353,7 @@ async def table_results_squads_miscellanoeus(page):
 
   return data
 
-async def build_json(comp_name, overall, home_away, squads_standard, squads_shooting, squads_passing, squads_goal_and_shot_creation, squads_defensive_action, squads_posesion, squads_playing_time, squads_miscellanoeus):
+async def build_json(comp_name, overall, home_away, squads_standard=[], squads_shooting=[], squads_passing=[], squads_goal_and_shot_creation=[], squads_defensive_action=[], squads_posesion=[], squads_playing_time=[], squads_miscellanoeus=[]):
   result = {
     "league": comp_name,
     "season": "2025-2026",
@@ -308,7 +393,7 @@ async def main(league):
       "url":"https://fbref.com/en/comps/11/Serie-A-Stats"
    },
    "champions":{
-      "id_general_table": "#div_results2025-202680_overall table tbody tr",
+      "id_general_table": "#results2025-202680_overall tbody tr",#div_results2025-202680_overall table tbody tr",
       "id_home_away_table": "#results2025-202680_home_away tbody tr",
       "url":"https://fbref.com/en/comps/8/Champions-League-Stats"
    }
@@ -323,34 +408,45 @@ async def main(league):
   competition = competitions[league]
   await navigate_to_page(page, competition['url'])
 
-  overall_data = await table_results_overall(page, competition['id_general_table'])
-  home_away_data = await table_results_home_away(page, competition['id_home_away_table'])
-  squads_standard_data = await table_results_stats_squads(page)
-  squads_shooting_data = await table_results_squads_shooting(page)
-  squads_passing_data = await table_results_squads_passing(page)
-  squads_goal_and_shot_creation_data = await table_results_squads_goal_and_shot_creation(page)
-  squads_defensive_action_data = await table_results_squads_defensive_actions(page)
-  squads_possesion_data = await table_results_squads_possesion(page)
-  squads_playing_time_data = await table_results_squads_playing_time(page)
-  squads_miscellaneous_data = await table_results_squads_miscellanoeus(page)
-  # overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[];home_away_data=[]
-  output = await build_json(
-    league, 
-    overall_data,
-    home_away_data,
-    squads_standard_data,
-    squads_shooting_data, 
-    squads_passing_data,
-    squads_goal_and_shot_creation_data,
-    squads_defensive_action_data,
-    squads_possesion_data,
-    squads_playing_time_data,
-    squads_miscellaneous_data
+  if league != "champions":
+    overall_data = await table_results_overall(page, competition['id_general_table'])
+    home_away_data = await table_results_home_away(page, competition['id_home_away_table'])
+    squads_standard_data = await table_results_stats_squads(page)
+    squads_shooting_data = await table_results_squads_shooting(page)
+    squads_passing_data = await table_results_squads_passing(page)
+    squads_goal_and_shot_creation_data = await table_results_squads_goal_and_shot_creation(page)
+    squads_defensive_action_data = await table_results_squads_defensive_actions(page)
+    squads_possesion_data = await table_results_squads_possesion(page)
+    squads_playing_time_data = await table_results_squads_playing_time(page)
+    squads_miscellaneous_data = await table_results_squads_miscellanoeus(page)
+
+    output = await build_json(
+      league, 
+      overall_data,
+      home_away_data,
+      squads_standard_data,
+      squads_shooting_data, 
+      squads_passing_data,
+      squads_goal_and_shot_creation_data,
+      squads_defensive_action_data,
+      squads_possesion_data,
+      squads_playing_time_data,
+      squads_miscellaneous_data
+    )
+  else:
+    overall_data = await table_results_overall_champions(page, competition['id_general_table'])
+    home_away_data = await table_results_home_away_champions(page, competition['id_home_away_table'])
+
+    output = await build_json(
+      league, 
+      overall_data,
+      home_away_data
     )
 
+  # overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[];home_away_data=[]
   await browser.close()
   await playwright.stop()
 
   return output
 
-# a = asyncio.run(main(league=""))
+# a = asyncio.run(main(league="bundesliga"))
