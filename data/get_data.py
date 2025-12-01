@@ -6,6 +6,7 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
 from tools.cleaner import clean_unicode
 from tools.browser import setup_browser, navigate_to_page
+from tools.cache_redis import save_data, get_data
 
 async def table_results_overall(page, id_table):
   rows = await page.locator(id_table).all()
@@ -390,39 +391,37 @@ async def main(league):
   await navigate_to_page(page, competition['url'])
 
   if league != "champions":
-    overall_data = await table_results_overall(page, competition['id_general_table'])
-    home_away_data = await table_results_home_away(page, competition['id_home_away_table'])
-    squads_standard_data = await table_results_stats_squads(page)
-    squads_shooting_data = await table_results_squads_shooting(page)
-    squads_passing_data = await table_results_squads_passing(page)
-    squads_goal_and_shot_creation_data = await table_results_squads_goal_and_shot_creation(page)
-    squads_defensive_action_data = await table_results_squads_defensive_actions(page)
-    squads_possesion_data = await table_results_squads_possesion(page)
-    squads_playing_time_data = await table_results_squads_playing_time(page)
-    squads_miscellaneous_data = await table_results_squads_miscellanoeus(page)
+    tasks = [
+      table_results_overall(page, competition["id_general_table"]),
+      table_results_home_away(page, competition["id_home_away_table"]),
+      table_results_stats_squads(page),
+      table_results_squads_shooting(page),
+      table_results_squads_passing(page),
+      table_results_squads_goal_and_shot_creation(page),
+      table_results_squads_defensive_actions(page),
+      table_results_squads_possesion(page),
+      table_results_squads_playing_time(page),
+      table_results_squads_miscellanoeus(page)
+    ]
+    results = await asyncio.gather(*tasks)
+    output = await build_json(league, *results)
 
-    output = await build_json(
-      league, 
-      overall_data,
-      home_away_data,
-      squads_standard_data,
-      squads_shooting_data, 
-      squads_passing_data,
-      squads_goal_and_shot_creation_data,
-      squads_defensive_action_data,
-      squads_possesion_data,
-      squads_playing_time_data,
-      squads_miscellaneous_data
-    )
+    results_output = get_data(f"ft_data_{league}")
+    if results_output:
+      output = results_output
+    else: save_data(f"ft_data_{league}", output)
   else:
-    overall_data = await table_results_overall_champions(page, competition['id_general_table'])
-    home_away_data = await table_results_home_away_champions(page, competition['id_home_away_table'])
-
-    output = await build_json(
-      league, 
-      overall_data,
-      home_away_data
-    )
+    tasks = [
+      table_results_overall_champions(page, competition["id_general_table"]),
+      table_results_home_away_champions(page, competition["id_home_away_table"])
+    ]
+    results = await asyncio.gather(*tasks)
+    output = await build_json(league, *results)
+    
+    results_output = get_data("ft_data_champions")
+    if results_output:
+      output = results_output
+    else: save_data("ft_data_champions", output)
 
   # overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[];home_away_data=[]
   await browser.close()

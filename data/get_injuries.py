@@ -3,6 +3,7 @@ import asyncio
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
 from tools.browser import setup_browser, navigate_to_page
+from tools.cache_redis import save_data, get_data
 
 COMPETITIONS = {
    "laliga": {"url": "https://www.sportsgambler.com/injuries/football/spain-la-liga/"},
@@ -54,6 +55,12 @@ async def main(league):
   await browser.close()
   await playwright.stop()
 
+  results_output = get_data("ft_injuries")
+  if results_output:
+    data = results_output
+  else: save_data("ft_injuries", data)
+
   return {"status": "success", "data": data}
+
 
 # a = asyncio.run(main(league=""))
