@@ -2,29 +2,10 @@ import sys
 import os
 import json
 import asyncio
-from playwright.async_api import async_playwright
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
 from tools.cleaner import clean_unicode
-
-realistic_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-
-async def setup_browser():
-  playwright = await async_playwright().start()
-  browser = await playwright.chromium.launch()
-  context = await browser.new_context(user_agent=realistic_user_agent)
-  page = await context.new_page()
-  return playwright, browser, page
-
-async def navigate_to_page(page, url, max_retries=3):
-  attempt=1
-  while attempt <= max_retries:
-    try:
-      response = await page.goto(url, timeout=90000)
-      return response
-    except Exception as e:
-      attempt+=1
-      raise Exception({"status": "error", "message": str(e)})
+from tools.browser import setup_browser, navigate_to_page
 
 async def table_results_overall(page, id_table):
   rows = await page.locator(id_table).all()
