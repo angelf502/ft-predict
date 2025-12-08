@@ -19,8 +19,8 @@ async def injury_results(page, team_locator):
   data = []
 
   col_names = [
-      "team", "type", "player", "position", "matches", "goals", "assists", 
-      "info", "expected_return"
+    "team", "type", "player", "position", "matches", "goals", "assists", 
+    "info", "expected_return"
   ]
 
   for block in injury_blocks:
@@ -44,9 +44,16 @@ async def injury_results(page, team_locator):
     
 async def main(league):
   if league not in COMPETITIONS:
-    await browser.close()
-    await playwright.stop()
     return {"status": "error", "message": f"League: '{league}' not found."}
+
+  cache_key = "ft_injuries"
+  cached_data = get_data(cache_key)
+
+  if cached_data:
+    return {
+      "status": "success",
+      "data": cached_data
+    }
 
   playwright, browser, page = await setup_browser()
   competition = COMPETITIONS[league]
@@ -55,12 +62,8 @@ async def main(league):
   await browser.close()
   await playwright.stop()
 
-  results_output = get_data("ft_injuries")
-  if results_output:
-    data = results_output
-  else: save_data("ft_injuries", data)
+  save_data(cache_key, data)
 
   return {"status": "success", "data": data}
-
 
 # a = asyncio.run(main(league=""))

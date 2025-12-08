@@ -382,8 +382,6 @@ async def main(league):
   }
 
   if league not in competitions:
-    await browser.close()
-    await playwright.stop()
     return {"status": "error", "message": f"League: '{league}' not found."}
   
   playwright, browser, page = await setup_browser()
@@ -391,6 +389,14 @@ async def main(league):
   await navigate_to_page(page, competition['url'])
 
   if league != "champions":
+    cache_key = f"ft_data_{league}"
+    cached_data = get_data(cache_key)
+
+    if cached_data:
+      return {
+        "status": "success",
+        "data": cached_data
+      }
     tasks = [
       table_results_overall(page, competition["id_general_table"]),
       table_results_home_away(page, competition["id_home_away_table"]),
@@ -406,11 +412,16 @@ async def main(league):
     results = await asyncio.gather(*tasks)
     output = await build_json(league, *results)
 
-    results_output = get_data(f"ft_data_{league}")
-    if results_output:
-      output = results_output
-    else: save_data(f"ft_data_{league}", output)
+    save_data(f"ft_data_{league}", output)
   else:
+    cache_key = "ft_data_champions"
+    cached_data = get_data(cache_key)
+
+    if cached_data:
+      return {
+        "status": "success",
+        "data": cached_data
+      }
     tasks = [
       table_results_overall_champions(page, competition["id_general_table"]),
       table_results_home_away_champions(page, competition["id_home_away_table"])
@@ -418,10 +429,7 @@ async def main(league):
     results = await asyncio.gather(*tasks)
     output = await build_json(league, *results)
     
-    results_output = get_data("ft_data_champions")
-    if results_output:
-      output = results_output
-    else: save_data("ft_data_champions", output)
+    save_data("ft_data_champions", output)
 
   # overall_data=[];squads_standard_data=[];squads_shooting_data=[];squads_passing_data=[];squads_goal_and_shot_creation_data=[];squads_defensive_action_data=[];squads_possesion_data=[];squads_playing_time_data=[];squads_miscellaneous_data=[];home_away_data=[]
   await browser.close()
