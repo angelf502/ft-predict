@@ -4,6 +4,7 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
 from tools.browser import setup_browser, navigate_to_page
 from tools.cache_redis import save_data, get_data
+from tools.normalize_teams import normalize_team_name
 
 COMPETITIONS = {
    "laliga": {"url": "https://www.sportsgambler.com/injuries/football/spain-la-liga/"},
@@ -25,7 +26,8 @@ async def injury_results(page, team_locator):
 
   for block in injury_blocks:
     team_element = block.locator(team_locator)
-    team_name = await team_element.text_content() or ""
+    raw_team_name = await team_element.text_content() or ""
+    team_name = normalize_team_name(raw_team_name)
     rows = await block.locator(".inj-row").all()
     for row in rows:
       container = row.locator(".inj-container:not(.inj-titles)")
@@ -66,4 +68,4 @@ async def main(league):
 
   return {"status": "success", "data": data}
 
-# a = asyncio.run(main(league=""))
+# a = asyncio.run(main(league="champions"))

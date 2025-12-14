@@ -108,7 +108,7 @@ async def fetch_h2h_data(page):
             data.append(item)
     return data
 
-async def get_h2h(team1, team2):
+async def get_h2h_teams(team1, team2):
     missing = [team for team in (team1, team2) if team not in H2H]
     if missing:
         return {"status": "error", "message": f"Team(s) not found(s): {', '.join(missing)}"}

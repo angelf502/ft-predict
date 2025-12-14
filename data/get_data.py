@@ -393,10 +393,13 @@ async def main(league):
     cached_data = get_data(cache_key)
 
     if cached_data:
-      return {
-        "status": "success",
-        "data": cached_data
-      }
+      await browser.close()
+      await playwright.stop()
+      # return json.dumps({
+      #     "status": "success",
+      #     "data": json.loads(cached_data)
+      # }, indent=2)
+      return json.loads(cached_data)
     tasks = [
       table_results_overall(page, competition["id_general_table"]),
       table_results_home_away(page, competition["id_home_away_table"]),
@@ -418,10 +421,14 @@ async def main(league):
     cached_data = get_data(cache_key)
 
     if cached_data:
-      return {
-        "status": "success",
-        "data": cached_data
-      }
+      await browser.close()
+      await playwright.stop()
+      # return json.dumps({
+      #   "status": "success",
+      #   "data": json.loads(cached_data)
+      # }, indent=2)
+      return json.loads(cached_data)
+
     tasks = [
       table_results_overall_champions(page, competition["id_general_table"]),
       table_results_home_away_champions(page, competition["id_home_away_table"])
@@ -437,4 +444,4 @@ async def main(league):
 
   return output
 
-# a = asyncio.run(main(league="bundesliga"))
+# a = asyncio.run(main(league="champions"))
