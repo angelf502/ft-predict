@@ -1,7 +1,7 @@
 # FT-Predict
 
 FT-Predict is a CLI-based tool designed to generate football match predictions for major European competitions.
-By analyzing key metrics—such as injury reports, head-to-head records, and historical performance—the tool provides probabilistic outcomes for Home and Away wins to help inform your strategy.
+By analyzing key metrics such as injury reports, head-to-head records, and historical performance the tool provides probabilistic outcomes for Home and Away wins to help inform your strategy.
 
 ## Features
 
@@ -67,10 +67,10 @@ python main.py
 ```
 ## Workflow
 1. Select a Competition: The CLI will present a menu of available leagues. Select the one you wish to analyze.
-![Menu Selection](https://drive.google.com/file/d/1fe1N1nXUOSZLLsny_cLCwf2Uz1farT3a/view?usp=drive_link)
+![Menu Selection](https://drive.google.com/file/d/1fe1N1nXUOSZLLsny_cLCwf2Uz1farT3a/view?usp=sharing)
 
 2. Choose Teams: Once the data is fetched and cached, a list of upcoming matches or available teams will appear.
-![Team List](https://drive.google.com/file/d/1bgudzdwYorKtVE19BS8z0kI9kg5hD9c-/view?usp=drive_link)
+![Team List](https://drive.google.com/file/d/1bgudzdwYorKtVE19BS8z0kI9kg5hD9c-/view?usp=sharing)
 
 3. View Analysis: The tool outputs a detailed breakdown, including Home/Away win percentages and critical context like player injuries and H2H stats to ensure the prediction is as accurate as possible.
 ![Prediction Results](https://drive.google.com/file/d/18IfCL3mLgk39ofzHeFUtLsk3z30vqWpf/view?usp=sharing)
